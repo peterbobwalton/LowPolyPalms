@@ -1,7 +1,8 @@
 """
 Greyscale frond pattern for the palms, multiplied by the frond colour (live green, yellowing, dead brown all share it).
 U runs across the frond (0 left leaflet tips, 0.5 the midrib, 1 right tips), V along it (the generator tiles it 3x).
-Leaflets angle out and forward towards the tip, with dark gaps between them and a pale vein down each. Opaque: no alpha.
+Leaflets angle out and forward towards the tip, each shaded like a folded leaf (gradients, no lines), so they read as
+a herringbone of V's. Opaque single channel: no alpha.
 """
 import math
 import os
@@ -18,23 +19,29 @@ N = 10                          # leaflets per tile per side
 SWEEP = 5.0
 
 
+def smooth(e0, e1, x):
+    t = max(0.0, min(1.0, (x - e0) / (e1 - e0)))
+    return t * t * (3 - 2 * t)
+
+
 def value(u, v, rng_noise):
+    """No lines: every leaflet is shaded like a folded leaf - dark at its leading edge, brightening to the lit
+    crease, then a darker underside - so the leaflets read as a V (herringbone) along the frond."""
     du = abs(u - 0.5) * 2.0                          # 0 at the midrib, 1 at the leaflet tips
-    if du < 0.035:
-        return 0.95 if du < 0.022 else 0.6         # pale rib with a dark edge
-    phase = v * N + du * SWEEP                       # leaflets sweep towards the tip on both sides: a herringbone
+    phase = v * N + du * SWEEP                       # leaflets sweep towards the tip on both sides
     k = math.floor(phase)
-    s = phase - k
-    # each leaflet its own shade (seeded by leaflet and side) so the frond doesn't look ruled
-    tone = random.Random(int(k) % N * 2 + (u > 0.5)).uniform(-0.09, 0.09)     # repeats per tile: no seam
-    if s < 0.1:
-        val = 0.5                                   # narrow gap between leaflets
+    s = phase - k                                    # 0..1 across one leaflet
+    tone = random.Random(int(k) % N * 2 + (u > 0.5)).uniform(-0.07, 0.07)   # repeats per tile: no seam
+    if s < 0.58:
+        val = 0.66 + 0.33 * (s / 0.58) ** 1.4         # lit half: dark edge -> bright crease
     else:
-        t = (s - 0.1) / 0.9
-        val = 0.8 + tone + 0.12 * math.sin(math.pi * t)     # rounded leaflet
-        if abs(t - 0.45) < 0.05:
-            val = min(1.0, val + 0.07)              # leaflet vein
-    val *= 1.0 - 0.25 * du * du                     # darker towards the tips
+        t = (s - 0.58) / 0.42
+        val = 0.99 - 0.20 * smooth(0.0, 0.25, t) - 0.10 * t   # past the crease: drops into the shaded half
+    val += tone
+    val *= 0.84 + 0.16 * smooth(0.03, 0.22, du)     # shadowed where the leaflets join the midrib
+    val *= 1.0 - 0.18 * du * du                     # a little darker towards the tips
+    rib = 1.0 - smooth(0.015, 0.045, du)            # soft pale midrib
+    val = val * (1 - rib) + 0.9 * rib
     return max(0.0, min(1.0, val + rng_noise))
 
 
@@ -46,7 +53,7 @@ def main():
         v = (y + 0.5) / (H * SS)
         for x in range(W * SS):
             u = (x + 0.5) / (W * SS)
-            px[x, y] = int(255 * value(u, v, rng.uniform(-0.03, 0.03)))
+            px[x, y] = int(255 * value(u, v, rng.uniform(-0.02, 0.02)))
     img = big.resize((W, H), Image.LANCZOS)
     os.makedirs(OUT, exist_ok=True)
     path = os.path.join(OUT, "T_PalmFrond.png")

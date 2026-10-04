@@ -4,8 +4,6 @@ Low-poly coconut palms: 5 live variants and 3 dead ones, made for Heroes of Beng
 
 ![preview](preview.png)
 
-![close-up](closeup.png)
-
 | Mesh | What | Height | Tris (LOD0 / 1 / 2) |
 |---|---|---|---|
 | SM_Palm_Coco_A | tall, moderate lean | 9.6 m | 921 / 414 / 138 |
@@ -49,10 +47,10 @@ In HoB about 15% of placements use a dead variant.
 
 ### Frond texture
 
-`T_PalmFrond.png` (256 x 512, greyscale, opaque) is a midrib with angled leaflets and dark gaps between them.
+`T_PalmFrond.png` (256 x 512, greyscale, opaque, no alpha) is a soft midrib with leaflets sweeping forward from it,
+each shaded like a folded leaf (gradients rather than lines), so every frond reads as a herringbone of V's.
 Every frond slot (Young, Frond, Old, Dead) multiplies it by its own colour, so one texture covers green, yellowing
-and dead fronds. Its average brightness is about 0.6 (linear): multiply by about 1.7 to keep the flat colours'
-look. Fronds have UVs (U across, 0.5 on the midrib; V along, tiled 3 times); other parts don't use the texture.
+and dead fronds. Its average brightness is about 0.5 (linear): multiply by about 2 to keep the flat colours' look. Fronds have UVs (U across, 0.5 on the midrib; V along, tiled 3 times); other parts don't use the texture.
 `gen_frond_tex.py` regenerates it (needs Pillow).
 
 Fronds are single-sided strips: **use a two-sided material** (or disable back-face culling), or they disappear
