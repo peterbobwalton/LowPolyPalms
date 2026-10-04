@@ -51,7 +51,7 @@ In HoB about 15% of placements use a dead variant.
 
 `T_PalmFrond.png` (256 x 512, greyscale, opaque) is a midrib with angled leaflets and dark gaps between them.
 Every frond slot (Young, Frond, Old, Dead) multiplies it by its own colour, so one texture covers green, yellowing
-and dead fronds. Its average brightness is about 0.6 (linear): multiply by about 1.65 to keep the flat colours'
+and dead fronds. Its average brightness is about 0.6 (linear): multiply by about 1.7 to keep the flat colours'
 look. Fronds have UVs (U across, 0.5 on the midrib; V along, tiled 3 times); other parts don't use the texture.
 `gen_frond_tex.py` regenerates it (needs Pillow).
 

@@ -12,24 +12,29 @@ from PIL import Image
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(os.path.abspath(__file__)), "out")
 W, H, SS = 256, 512, 2          # final size, supersampling
-N = 14                          # leaflets per tile per side
-SLANT = 0.55                    # how far a leaflet runs towards the tip across the half-width (in leaflet pitches)
+N = 10                          # leaflets per tile per side
+# How far a leaflet runs along the frond (in leaflet pitches) between the midrib and its tip. A tile is about 1.5 m of
+# frond and 0.9 m across, so 5 pitches puts the leaflets at roughly 50 degrees to the midrib on the mesh: a herringbone.
+SWEEP = 5.0
 
 
 def value(u, v, rng_noise):
     du = abs(u - 0.5) * 2.0                          # 0 at the midrib, 1 at the leaflet tips
     if du < 0.035:
-        return 0.98 if du < 0.022 else 0.62        # pale rib with a dark edge
-    phase = v * N + du * SLANT * N / 4.0
-    s = phase - math.floor(phase)
-    if s < 0.13:
-        val = 0.42                                  # gap between leaflets
+        return 0.95 if du < 0.022 else 0.6         # pale rib with a dark edge
+    phase = v * N + du * SWEEP                       # leaflets sweep towards the tip on both sides: a herringbone
+    k = math.floor(phase)
+    s = phase - k
+    # each leaflet its own shade (seeded by leaflet and side) so the frond doesn't look ruled
+    tone = random.Random(int(k) % N * 2 + (u > 0.5)).uniform(-0.09, 0.09)     # repeats per tile: no seam
+    if s < 0.1:
+        val = 0.5                                   # narrow gap between leaflets
     else:
-        t = (s - 0.13) / 0.87
-        val = 0.80 + 0.14 * math.sin(math.pi * t)  # rounded leaflet
-        if abs(t - 0.5) < 0.06:
-            val = min(1.0, val + 0.08)              # leaflet vein
-    val *= 1.0 - 0.22 * du * du                     # darker towards the tips
+        t = (s - 0.1) / 0.9
+        val = 0.8 + tone + 0.12 * math.sin(math.pi * t)     # rounded leaflet
+        if abs(t - 0.45) < 0.05:
+            val = min(1.0, val + 0.07)              # leaflet vein
+    val *= 1.0 - 0.25 * du * du                     # darker towards the tips
     return max(0.0, min(1.0, val + rng_noise))
 
 
@@ -46,7 +51,8 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     path = os.path.join(OUT, "T_PalmFrond.png")
     img.save(path)
-    print(path, sum(img.getdata()) / (W * H) / 255.0)
+    lin = [((c / 255 + 0.055) / 1.055) ** 2.4 if c > 10 else c / 255 / 12.92 for c in img.get_flattened_data()]
+    print(path, 'gain', round(len(lin) / sum(lin), 3))
 
 
 if __name__ == "__main__":
