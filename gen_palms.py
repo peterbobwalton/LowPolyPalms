@@ -34,20 +34,20 @@ def srgb(c):
 
 
 class Mesh:
-    """Flat-shaded OBJ builder in cm; faces CCW seen from the front."""
+    """Flat-shaded OBJ builder in cm; faces CCW seen from the front. Fronds carry UVs for the frond texture."""
 
     def __init__(self):
-        self.v, self.vn, self.vi, self.ni, self.faces = [], [], {}, {}, {}
+        self.v, self.vt, self.vn, self.vi, self.ti, self.ni, self.faces = [], [], [], {}, {}, {}, {}
 
     def _idx(self, store, lut, val):
-        k = tuple(round(c, 3) for c in val)
+        k = tuple(round(c, 4) for c in val)
         if k not in lut:
             store.append(k)
             lut[k] = len(store)
         return lut[k]
 
-    def poly(self, slot, pts):
-        a, b, c = pts[0], pts[1], pts[2]
+    def poly(self, slot, pts, uvs=None):
+        a, b, c = pts[0], pts[1], pts[-1]
         u = (b[0] - a[0], b[1] - a[1], b[2] - a[2])
         w = (c[0] - a[0], c[1] - a[1], c[2] - a[2])
         n = (u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0])
@@ -55,7 +55,9 @@ class Mesh:
         if L < 1e-9:
             return                                   # degenerate
         ni = self._idx(self.vn, self.ni, tuple(x / L for x in n))
-        self.faces.setdefault(slot, []).append([(self._idx(self.v, self.vi, p), ni) for p in pts])
+        uvs = uvs or [(0.0, 0.0)] * len(pts)
+        self.faces.setdefault(slot, []).append([(self._idx(self.v, self.vi, p), self._idx(self.vt, self.ti, t), ni)
+                                                for p, t in zip(pts, uvs)])
 
     def tris(self):
         return sum(len(f) - 2 for fs in self.faces.values() for f in fs)
@@ -66,18 +68,26 @@ class Mesh:
             f.write("# LowPolyPalms - %s (cm, Z up)\nmtllib %s.mtl\no %s\n" % (comment, base, base))
             for p in self.v:
                 f.write("v %.2f %.2f %.2f\n" % p)
+            for t in self.vt:
+                f.write("vt %.4f %.4f\n" % t)
             for n in self.vn:
                 f.write("vn %.4f %.4f %.4f\n" % n)
             for slot in COLOURS:
                 if slot in self.faces:
                     f.write("usemtl %s\n" % slot)
                     for face in self.faces[slot]:
-                        f.write("f " + " ".join("%d//%d" % c for c in face) + "\n")
+                        f.write("f " + " ".join("%d/%d/%d" % c for c in face) + "\n")
         with open(os.path.join(os.path.dirname(path), base + ".mtl"), "w") as f:
             for slot in COLOURS:
                 if slot in self.faces:
                     r, g, b = (srgb(c) for c in COLOURS[slot])
-                    f.write("newmtl %s\nKd %.4f %.4f %.4f\nKs 0 0 0\nd 1\nillum 1\n\n" % (slot, r, g, b))
+                    f.write("newmtl %s\nKd %.4f %.4f %.4f\nKs 0 0 0\nd 1\nillum 1\n" % (slot, r, g, b))
+                    if slot in FRONDS:
+                        f.write("map_Kd T_PalmFrond.png\n")
+                    f.write("\n")
+
+
+FRONDS = ("Young", "Frond", "Old", "Dead")
 
 
 def quad(m, slot, a, b, c, d):
@@ -168,8 +178,13 @@ def frond_path(base, az, elev, L, droop, n):
     return [add(add(base, d, L * j / n), Z, -droop * (j / n) ** 2) for j in range(n + 1)]
 
 
-def frond(m, slot, pts, az, wmax, fold0, fold1, rng, bare=0.12, serr=0.42):
-    """Leaflets either side of the rachis, folded down as an inverted V, saw-tooth edges."""
+def uvface(m, slot, pts, uvs):
+    m.poly(slot, pts, uvs)
+
+
+def frond(m, slot, pts, az, wmax, fold0, fold1, rng, bare=0.12, serr=0.42, tiles=3.0):
+    """Leaflets either side of the rachis, folded down as an inverted V, saw-tooth edges.
+    UVs for the frond texture: U across (0.5 on the rachis, out to 0/1 at full leaflet width), V along, tiled."""
     side = (math.sin(az), -math.cos(az), 0.0)                   # horizontal, constant along the frond
     n = len(pts) - 1
     prev = None
@@ -189,15 +204,17 @@ def frond(m, slot, pts, az, wmax, fold0, fold1, rng, bare=0.12, serr=0.42):
         f = math.radians(fold0 + (fold1 - fold0) * u) + rng.uniform(-0.08, 0.08)
         R = add(add(p, side, w * math.cos(f)), up, -w * math.sin(f))
         Lf = add(add(p, side, -w * math.cos(f)), up, -w * math.sin(f))
+        tv = tiles * u
+        eu = 0.5 * min(1.0, w / max(wmax, 1.0))                # texture width follows the leaflet width
         if prev:
-            p0, R0, L0 = prev
+            p0, R0, L0, tv0, eu0 = prev
             if w > 0:
-                quad(m, slot, p0, p, R, R0)
-                quad(m, slot, L0, Lf, p, p0)
+                uvface(m, slot, [p0, p, R, R0], [(0.5, tv0), (0.5, tv), (0.5 + eu, tv), (0.5 + eu0, tv0)])
+                uvface(m, slot, [L0, Lf, p, p0], [(0.5 - eu0, tv0), (0.5 - eu, tv), (0.5, tv), (0.5, tv0)])
             else:
-                tri(m, slot, p0, p, R0)
-                tri(m, slot, L0, p, p0)
-        prev = (p, R, Lf)
+                uvface(m, slot, [p0, p, R0], [(0.5, tv0), (0.5, tv), (0.5 + eu0, tv0)])
+                uvface(m, slot, [L0, p, p0], [(0.5 - eu0, tv0), (0.5, tv), (0.5, tv0)])
+        prev = (p, R, Lf, tv, eu)
 
 
 def coconuts(m, centre, axis_az, rng, count, r=13.0):

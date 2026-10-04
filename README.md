@@ -1,8 +1,10 @@
 # LowPolyPalms
 
-Low-poly coconut palms: 5 live variants and 3 dead ones, made for Heroes of Benghazi. Flat colours, no textures.
+Low-poly coconut palms: 5 live variants and 3 dead ones, made for Heroes of Benghazi. Flat colours plus one shared greyscale frond texture.
 
 ![preview](preview.png)
+
+![close-up](closeup.png)
 
 | Mesh | What | Height | Tris (LOD0 / 1 / 2) |
 |---|---|---|---|
@@ -23,8 +25,14 @@ ones are 85% of a mature frond and the dead skirt is capped at 90% of the smalle
 ## Unreal (5.8)
 
 Copy `Unreal/Content/LowPolyPalms` into your project's `Content` folder (it must stay at `/Game/LowPolyPalms`).
-It is self-contained: the meshes (3 LODs each), `M_LowPolyPalm` (two-sided, default lit, one `Color` parameter),
-one material instance per colour slot, and `Maps/LowPolyPalms_Showcase`. Saved with UE 5.8, so it opens in
+It is self-contained: the meshes (3 LODs each), `M_LowPolyPalm`, one material instance per colour slot,
+`T_PalmFrond` and `Maps/LowPolyPalms_Showcase`.
+
+`M_LowPolyPalm` is two-sided, default lit: `Color` x `Pattern` (greyscale texture, white by default) x `PatternGain`,
+plus wind sway as world position offset (the trunk stays rooted, the crown sways and the frond tips flutter).
+`Wind` scales it: set it to 0 on an instance, or drive it from your own quality settings. Sway is based on height
+above world Z = 0, so it assumes palms stand on ground near Z = 0. For big scatters, set
+`World Position Offset Disable Distance` on the instanced components (Heroes of Benghazi uses 80 m). Saved with UE 5.8, so it opens in
 5.8 or later only. For older engines, import the FBX files.
 
 To recolour, edit the `MI_Palm_*` instances: TrunkA/TrunkB (bands), Husk, Young, Frond, Old, Dead, Nut.
@@ -36,7 +44,16 @@ In HoB about 15% of placements use a dead variant.
 
 - `FBX/` — exported from Unreal with LODs, material slots named as above (no colours: assign them yourself,
   see the table below).
-- `OBJ/` — OBJ + MTL with the colours as `Kd` (sRGB), LOD0 only. Opens directly in Blender, Godot, Unity.
+- `OBJ/` — OBJ + MTL with the colours as `Kd` (sRGB) and `T_PalmFrond.png` as the frond map, LOD0 only.
+  Opens directly in Blender, Godot, Unity.
+
+### Frond texture
+
+`T_PalmFrond.png` (256 x 512, greyscale, opaque) is a midrib with angled leaflets and dark gaps between them.
+Every frond slot (Young, Frond, Old, Dead) multiplies it by its own colour, so one texture covers green, yellowing
+and dead fronds. Its average brightness is about 0.6 (linear): multiply by about 1.65 to keep the flat colours'
+look. Fronds have UVs (U across, 0.5 on the midrib; V along, tiled 3 times); other parts don't use the texture.
+`gen_frond_tex.py` regenerates it (needs Pillow).
 
 Fronds are single-sided strips: **use a two-sided material** (or disable back-face culling), or they disappear
 from behind.
@@ -54,7 +71,7 @@ from behind.
 
 ## Making more
 
-`gen_palms.py` (Python 3, no dependencies) regenerates the OBJ/MTL set: `python gen_palms.py [out_dir]`.
+`gen_palms.py` (Python 3, no dependencies) regenerates the OBJ/MTL set (copy `T_PalmFrond.png` next to them): `python gen_palms.py [out_dir]`.
 New variants are a line each in `VARIANTS` (seed, trunk height, lean, bow, sideways wobble, frond count, dead
 skirt count, coconut clusters). Re-import the OBJs into Unreal with your own materials, or replace the meshes in
 `/Game/LowPolyPalms/Meshes` (import with the same names to keep the material slots).
