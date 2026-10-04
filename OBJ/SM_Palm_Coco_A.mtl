@@ -1,0 +1,48 @@
+newmtl TrunkA
+Kd 0.5271 0.4845 0.4236
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl TrunkB
+Kd 0.4366 0.3959 0.3492
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Husk
+Kd 0.3959 0.3133 0.2209
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Young
+Kd 0.4492 0.5657 0.2209
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Frond
+Kd 0.2717 0.4614 0.1897
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Old
+Kd 0.5064 0.4492 0.2478
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Dead
+Kd 0.4492 0.3318 0.2060
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl Nut
+Kd 0.4845 0.5371 0.2209
+Ks 0 0 0
+d 1
+illum 1
+
