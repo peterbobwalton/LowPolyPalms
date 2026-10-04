@@ -28,7 +28,7 @@ def value(u, v, rng_noise):
     """No lines: every leaflet is shaded like a folded leaf - dark at its leading edge, brightening to the lit
     crease, then a darker underside - so the leaflets read as a V (herringbone) along the frond."""
     du = abs(u - 0.5) * 2.0                          # 0 at the midrib, 1 at the leaflet tips
-    phase = v * N + du * SWEEP                       # leaflets sweep towards the tip on both sides
+    phase = v * N - du * SWEEP                       # leaflets sweep towards the tip on both sides (V points to the base)
     k = math.floor(phase)
     s = phase - k                                    # 0..1 across one leaflet
     tone = random.Random(int(k) % N * 2 + (u > 0.5)).uniform(-0.07, 0.07)   # repeats per tile: no seam
